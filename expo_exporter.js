@@ -31,6 +31,236 @@
       .slice(0, 120);
   }
 
+function askText(label, current) {
+  const v = prompt(label, current == null ? "" : String(current));
+  if (v === null) return null; // annulation
+  return v;
+}
+
+function askDate(label, currentStr) {
+  const v = prompt(label, currentStr || "");
+  if (v === null) return null;
+  const d = parseFRDate(v);
+  if (!d) { alert("Date invalide. Format attendu : dd/mm/yyyy hh:mm"); return askDate(label, currentStr); }
+  return { str: v, date: d };
+}
+
+function askNumberFR(label, currentNum) {
+  const cur = (currentNum == null || !Number.isFinite(currentNum)) ? "" : String(currentNum).replace(".", ",");
+  const v = prompt(label, cur);
+  if (v === null) return null;
+  const n = parseFloat(String(v).replace(",", "."));
+  if (!Number.isFinite(n)) { alert("Nombre invalide."); return askNumberFR(label, currentNum); }
+  return n;
+}
+
+function buildRecap(P) {
+  const yesno = b => (b ? "OUI" : "NON");
+  return [
+    "Récapitulatif (valider = OK)",
+    "--------------------------------",
+    `Référence : ${P.reference || ""}`,
+    `Adresse   : ${P.adresse || ""}`,
+    `Date début: ${P.sDateDeb || ""}`,
+    `Date fin  : ${P.sDateFin || ""}`,
+    `Expo début: ${Number.isFinite(P.ExpoDeb) ? fmtFRNumber(P.ExpoDeb) : ""} V/m`,
+    `Expo fin  : ${Number.isFinite(P.ExpoFin) ? fmtFRNumber(P.ExpoFin) : ""} V/m`,
+    `ExpoMax ? : ${yesno(P.hasMax)}`,
+    `Date max  : ${P.sDateMax || ""}`,
+    `Expo max  : ${Number.isFinite(P.ExpoMax) ? fmtFRNumber(P.ExpoMax) : ""} V/m`,
+    `Pixels bruts : ${yesno(P.archiverPixels)}`,
+    "",
+    "OK = Continuer / Annuler = Modifier"
+  ].join("\n");
+}
+
+function validateExpoMaxRule(P) {
+  // règle ExpoMax obligatoire
+  if (P.ExpoDeb <= 0 || P.ExpoFin === P.ExpoDeb ||
+      Math.abs(P.ExpoFin - P.ExpoDeb) / P.ExpoDeb < 0.20) {
+    if (!Number.isFinite(P.ExpoMax)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function editOneField(P) {
+  const choice = prompt(
+    "Quel champ modifier ?\n" +
+    "1 Référence\n" +
+    "2 Adresse\n" +
+    "3 Date début\n" +
+    "4 Date fin\n" +
+    "5 Expo début\n" +
+    "6 Expo fin\n" +
+    "7 Activer/Désactiver ExpoMax\n" +
+    "8 Date max\n" +
+    "9 Expo max\n" +
+    "10 Pixels bruts\n" +
+    "0 Annuler",
+    "0"
+  );
+  if (choice === null) return false;
+
+  const c = String(choice).trim();
+
+  if (c === "0") return false;
+
+  if (c === "1") {
+    const v = askText("Référence Capteur :", P.reference);
+    if (v === null) return false;
+    P.reference = v;
+    return true;
+  }
+
+  if (c === "2") {
+    const v = askText("Adresse Capteur :", P.adresse);
+    if (v === null) return false;
+    P.adresse = v;
+    return true;
+  }
+
+  if (c === "3") {
+    const r = askDate("Date début (dd/mm/yyyy hh:mm) :", P.sDateDeb);
+    if (r === null) return false;
+    P.sDateDeb = r.str; P.DateDeb = r.date;
+    return true;
+  }
+
+  if (c === "4") {
+    const r = askDate("Date fin (dd/mm/yyyy hh:mm) :", P.sDateFin);
+    if (r === null) return false;
+    P.sDateFin = r.str; P.DateFin = r.date;
+    return true;
+  }
+
+  if (c === "5") {
+    const n = askNumberFR("Expo début (V/m) :", P.ExpoDeb);
+    if (n === null) return false;
+    P.ExpoDeb = n;
+    return true;
+  }
+
+  if (c === "6") {
+    const n = askNumberFR("Expo fin (V/m) :", P.ExpoFin);
+    if (n === null) return false;
+    P.ExpoFin = n;
+    return true;
+  }
+
+  if (c === "7") {
+    P.hasMax = confirm("Fournir ExpoMax ?");
+    if (!P.hasMax) { P.sDateMax = ""; P.DateMax = null; P.ExpoMax = NaN; }
+    return true;
+  }
+
+  if (c === "8") {
+    if (!P.hasMax) { alert("ExpoMax n'est pas activé."); return true; }
+    const r = askDate("Date MAX (dd/mm/yyyy hh:mm) :", P.sDateMax);
+    if (r === null) return false;
+    P.sDateMax = r.str; P.DateMax = r.date;
+    return true;
+  }
+
+  if (c === "9") {
+    if (!P.hasMax) { alert("ExpoMax n'est pas activé."); return true; }
+    const n = askNumberFR("Expo MAX (V/m) :", P.ExpoMax);
+    if (n === null) return false;
+    P.ExpoMax = n;
+    return true;
+  }
+
+  if (c === "10") {
+    P.archiverPixels = confirm("Archiver pixels bruts ?");
+    return true;
+  }
+
+  alert("Choix invalide.");
+  return true;
+}
+
+function collectAndConfirmUserInputs() {
+  const P = {
+    reference: "",
+    adresse: "",
+    sDateDeb: "",
+    sDateFin: "",
+    DateDeb: null,
+    DateFin: null,
+    ExpoDeb: NaN,
+    ExpoFin: NaN,
+    hasMax: false,
+    sDateMax: "",
+    DateMax: null,
+    ExpoMax: NaN,
+    archiverPixels: false
+  };
+
+  // Saisie initiale
+  {
+    const v1 = askText("Référence Capteur (ex: Site #Nantes_46) :", "");
+    if (v1 === null) return null;
+    P.reference = v1;
+
+    const v2 = askText("Adresse Capteur :", "");
+    if (v2 === null) return null;
+    P.adresse = v2;
+
+    const rDeb = askDate("Date début (dd/mm/yyyy hh:mm) :", "");
+    if (rDeb === null) return null;
+    P.sDateDeb = rDeb.str; P.DateDeb = rDeb.date;
+
+    const rFin = askDate("Date fin (dd/mm/yyyy hh:mm) :", "");
+    if (rFin === null) return null;
+    P.sDateFin = rFin.str; P.DateFin = rFin.date;
+
+    const eDeb = askNumberFR("Expo début (V/m) :", NaN);
+    if (eDeb === null) return null;
+    P.ExpoDeb = eDeb;
+
+    const eFin = askNumberFR("Expo fin (V/m) :", NaN);
+    if (eFin === null) return null;
+    P.ExpoFin = eFin;
+
+    P.hasMax = confirm("Fournir ExpoMax ?");
+    if (P.hasMax) {
+      const rMax = askDate("Date MAX (dd/mm/yyyy hh:mm) :", "");
+      if (rMax === null) return null;
+      P.sDateMax = rMax.str; P.DateMax = rMax.date;
+
+      const eMax = askNumberFR("Expo MAX (V/m) :", NaN);
+      if (eMax === null) return null;
+      P.ExpoMax = eMax;
+    }
+
+    P.archiverPixels = confirm("Archiver pixels bruts ?");
+  }
+
+  // Boucle récap + correction
+  while (true) {
+
+    if (!validateExpoMaxRule(P)) {
+      alert("ExpoMax obligatoire selon règle (Expo début <=0, Expo fin = Expo début, ou variation < 20%).");
+      P.hasMax = true;
+      const rMax = askDate("Date MAX (dd/mm/yyyy hh:mm) :", P.sDateMax);
+      if (rMax === null) return null;
+      P.sDateMax = rMax.str; P.DateMax = rMax.date;
+
+      const eMax = askNumberFR("Expo MAX (V/m) :", P.ExpoMax);
+      if (eMax === null) return null;
+      P.ExpoMax = eMax;
+      continue;
+    }
+
+    const ok = confirm(buildRecap(P));
+    if (ok) return P;
+
+    const keepGoing = editOneField(P);
+    if (!keepGoing) return null; // annulation
+  }
+}
+  
   // ============================================================
   // UI EXPORT : crée une boîte + zone de boutons (corrige ton bug)
   // ============================================================
@@ -185,45 +415,28 @@
   pts.sort((a, b) => a[0] - b[0]);
 
   // --------------------------
-  // Infos utilisateur
+  // Infos utilisateur + récapitulatif + corrections
   // --------------------------
-
-  const reference = prompt("Référence Capteur (ex: Site #Nantes_46) :", "");
-  const adresse = prompt("Adresse Capteur :", "");
-
-  const sDateDeb = prompt("Date début (dd/mm/yyyy hh:mm) :", "");
-  const sDateFin = prompt("Date fin (dd/mm/yyyy hh:mm) :", "");
-
-  const DateDeb = parseFRDate(sDateDeb);
-  const DateFin = parseFRDate(sDateFin);
-
-  if (!DateDeb || !DateFin) { alert("Dates invalides"); return; }
-
-  const ExpoDeb = parseFloat(String(prompt("Expo début (V/m) :", "") || "").replace(",", "."));
-  const ExpoFin = parseFloat(String(prompt("Expo fin (V/m) :", "") || "").replace(",", "."));
-
-  if (!Number.isFinite(ExpoDeb) || !Number.isFinite(ExpoFin)) {
-    alert("Expositions invalides"); return;
-  }
-
-  let DateMax = null, ExpoMax = null;
-  const hasMax = confirm("Fournir ExpoMax ?");
-  if (hasMax) {
-    const sDateMax = prompt("Date MAX (dd/mm/yyyy hh:mm) :", "");
-    DateMax = parseFRDate(sDateMax);
-    ExpoMax = parseFloat(String(prompt("Expo MAX (V/m) :", "") || "").replace(",", "."));
-  }
-
-  // règle ExpoMax obligatoire
-  if (ExpoDeb <= 0 || ExpoFin === ExpoDeb ||
-    Math.abs(ExpoFin - ExpoDeb) / ExpoDeb < 0.20) {
-    if (!Number.isFinite(ExpoMax)) {
-      alert("ExpoMax obligatoire selon règle.");
-      return;
-    }
-  }
-
-  const archiverPixels = confirm("Archiver pixels bruts ?");
+  
+  const P = collectAndConfirmUserInputs();
+  if (!P) { alert("Annulé par l'utilisateur."); return; }
+  
+  const reference = P.reference;
+  const adresse = P.adresse;
+  
+  const sDateDeb = P.sDateDeb;
+  const sDateFin = P.sDateFin;
+  
+  const DateDeb = P.DateDeb;
+  const DateFin = P.DateFin;
+  
+  const ExpoDeb = P.ExpoDeb;
+  const ExpoFin = P.ExpoFin;
+  
+  const DateMax = P.DateMax;
+  const ExpoMax = P.ExpoMax;
+  
+  const archiverPixels = P.archiverPixels;
 
   // --------------------------
   // Calibration
