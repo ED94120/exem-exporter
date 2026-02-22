@@ -524,8 +524,9 @@
   lines.push(`META;Pixels_Archive;${archiverPixels ? "OUI" : "NON"}`);
   lines.push(`META;NbMesures;${nbMesures}`);
   lines.push(`META;NbMesuresValides;${nbMesuresValides}`);
-  lines.push(`META;SeuilExpoMax_Vm;${SEUIL_EXPO_MAX}`);
+  lines.push(`META;SeuilExpoMax_Vm;${fmtFRNumber(SEUIL_EXPO_MAX)}`);
   lines.push(`META;SeuilDeltaMinutes;${SEUIL_DELTA_MINUTES}`);
+  lines.push(`META;RegleFiltrage;Delta<=${SEUIL_DELTA_MINUTES}min_exclu;Expo>=${fmtFRNumber(SEUIL_EXPO_MAX)}Vm_exclu`);
   
   lines.push(`DATA;DateHeure;Exposition_Vm`);
 
