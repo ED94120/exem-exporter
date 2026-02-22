@@ -1,7 +1,8 @@
 (() => {
 
   const SCRIPT_VERSION = "EXPO_CAPTEUR_V1_2026_02_22";
-  const SEUIL_EXPO_MAX = 10.0;
+  const SEUIL_EXPO_MAX = 10.0; // contrainte utilisée pour vérifier si le décodage des pixels donne des niveaux d'Exposition acceptables.
+  const SEUIL_DELTA_MINUTES = 30;   // seuil minimum entre deux mesures (en minutes)
 
   // --------------------------
   // Utils dates / nombres
@@ -449,7 +450,7 @@
   for (let k = 1; k < decoded.length; k++) {
     const dtMin = (decoded[k][0] - decoded[k - 1][0]) / 60000;
 
-    if (dtMin <= 30) {
+    if (dtMin <= SEUIL_DELTA_MINUTES) {
       deltaIssues++;
       audit.push(`AUDIT;DELTA_TROP_PETIT;${k};DeltaMin=${dtMin}`);
       decoded[k][1] = null; // expo vide
