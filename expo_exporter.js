@@ -25,54 +25,123 @@
 
   function sanitizeFileName(s) {
     return String(s || "")
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")   // enlève accents
-      .replace(/[^a-zA-Z0-9._-]+/g, "_")                  // garde seulement safe
-      .replace(/^_+|_+$/g, "")                            // trim underscores
-      .slice(0, 120);                                     // limite longueur
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9._-]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 120);
   }
 
-async function downloadFileUserClick(name, content, label = "Télécharger") {
+  // ============================================================
+  // UI EXPORT : crée une boîte + zone de boutons (corrige ton bug)
+  // ============================================================
+  function getOrCreateExportBox() {
+    let box = document.getElementById("EXEM_EXPORT_BOX");
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "EXEM_EXPORT_BOX";
+      box.style.cssText =
+        "position:fixed;right:12px;bottom:12px;z-index:999999;" +
+        "background:#fff;border:1px solid #999;border-radius:6px;" +
+        "padding:10px;max-width:55vw;max-height:45vh;overflow:auto;" +
+        "font:12px/1.3 Arial;box-shadow:0 2px 10px rgba(0,0,0,0.2)";
+      const title = document.createElement("div");
+      title.textContent = "Exports";
+      title.style.cssText = "font-weight:bold;margin-bottom:8px";
+      box.appendChild(title);
 
-  const box = getOrCreateExportBox();
-  const btnWrap = box.querySelector("#EXEM_EXPORT_BTNS");
+      const btns = document.createElement("div");
+      btns.id = "EXEM_EXPORT_BTNS";
+      btns.style.cssText = "display:flex;flex-direction:column;gap:6px";
+      box.appendChild(btns);
 
-  const btn = document.createElement("button");
-  btn.textContent = `${label} : ${name}`;
-  btn.style.cssText = "cursor:pointer;padding:6px 10px;text-align:left";
+      const hint = document.createElement("div");
+      hint.textContent = "Clique sur un bouton pour enregistrer le fichier.";
+      hint.style.cssText = "margin-top:8px;color:#444";
+      box.appendChild(hint);
 
-  btn.onclick = async () => {
-
-    if (!window.showSaveFilePicker) {
-      alert("Navigateur trop ancien pour sauvegarde sécurisée.");
-      return;
+      document.body.appendChild(box);
     }
 
-    try {
+    // garantit que la zone boutons existe
+    let btnWrap = box.querySelector("#EXEM_EXPORT_BTNS");
+    if (!btnWrap) {
+      btnWrap = document.createElement("div");
+      btnWrap.id = "EXEM_EXPORT_BTNS";
+      btnWrap.style.cssText = "display:flex;flex-direction:column;gap:6px";
+      box.appendChild(btnWrap);
+    }
 
-      const handle = await window.showSaveFilePicker({
-        suggestedName: name,
-        types: [{
-          description: "CSV",
-          accept: { "text/csv": [".csv"] }
-        }]
-      });
+    return box;
+  }
 
-      const writable = await handle.createWritable();
-      await writable.write(content);
-      await writable.close();
+  async function downloadFileUserClick(name, content, label = "Télécharger") {
 
-      btn.disabled = true;
-      btn.textContent = `Enregistré : ${name}`;
+    const box = getOrCreateExportBox();
+    const btnWrap = box.querySelector("#EXEM_EXPORT_BTNS"); // non-null garanti
 
-    } catch (err) {
-      if (err.name !== "AbortError") {
-        alert("Erreur sauvegarde : " + err.message);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = `${label} : ${name}`;
+    btn.style.cssText =
+      "cursor:pointer;padding:6px 10px;text-align:left;border:1px solid #777;" +
+      "border-radius:4px;background:#f7f7f7";
+
+    btn.onclick = async () => {
+
+      // 1) mode moderne (Save File Picker)
+      if (window.showSaveFilePicker) {
+        try {
+          const handle = await window.showSaveFilePicker({
+            suggestedName: name,
+            types: [{
+              description: "CSV",
+              accept: { "text/csv": [".csv"] }
+            }]
+          });
+
+          const writable = await handle.createWritable();
+          await writable.write(content);
+          await writable.close();
+
+          btn.disabled = true;
+          btn.textContent = `Enregistré : ${name}`;
+          btn.style.opacity = "0.7";
+          return;
+
+        } catch (err) {
+          if (err && err.name === "AbortError") return;
+          alert("Erreur sauvegarde : " + (err && err.message ? err.message : err));
+          console.error(err);
+          return;
+        }
       }
-    }
-  };
 
-  btnWrap.appendChild(btn);
-}
+      // 2) fallback universel : téléchargement par Blob (si showSaveFilePicker absent)
+      try {
+        const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+        btn.disabled = true;
+        btn.textContent = `Téléchargé : ${name}`;
+        btn.style.opacity = "0.7";
+
+      } catch (e) {
+        alert("Erreur téléchargement : " + (e && e.message ? e.message : e));
+        console.error(e);
+      }
+    };
+
+    btnWrap.appendChild(btn);
+  }
 
   // --------------------------
   // Extraction pixels
@@ -120,8 +189,8 @@ async function downloadFileUserClick(name, content, label = "Télécharger") {
 
   if (!DateDeb || !DateFin) { alert("Dates invalides"); return; }
 
-  const ExpoDeb = parseFloat(prompt("Expo début (V/m) :", "").replace(",", "."));
-  const ExpoFin = parseFloat(prompt("Expo fin (V/m) :", "").replace(",", "."));
+  const ExpoDeb = parseFloat(String(prompt("Expo début (V/m) :", "") || "").replace(",", "."));
+  const ExpoFin = parseFloat(String(prompt("Expo fin (V/m) :", "") || "").replace(",", "."));
 
   if (!Number.isFinite(ExpoDeb) || !Number.isFinite(ExpoFin)) {
     alert("Expositions invalides"); return;
@@ -130,9 +199,9 @@ async function downloadFileUserClick(name, content, label = "Télécharger") {
   let DateMax = null, ExpoMax = null;
   const hasMax = confirm("Fournir ExpoMax ?");
   if (hasMax) {
-    const sDateMax = prompt("Date MAX (optionnel) :", "");
+    const sDateMax = prompt("Date MAX (dd/mm/yyyy hh:mm) :", "");
     DateMax = parseFRDate(sDateMax);
-    ExpoMax = parseFloat(prompt("Expo MAX :", "").replace(",", "."));
+    ExpoMax = parseFloat(String(prompt("Expo MAX (V/m) :", "") || "").replace(",", "."));
   }
 
   // règle ExpoMax obligatoire
@@ -247,14 +316,24 @@ async function downloadFileUserClick(name, content, label = "Télécharger") {
 
   audit.forEach(a => lines.push(a));
 
-  downloadFileUserClick(baseName + ".csv", lines.join("\n"), "Télécharger CSV");
+  // --------------------------
+  // Export (avec protection erreurs)
+  // --------------------------
 
-  if (archiverPixels) {
-    const pix = ["PIXELS;xp;yp"];
-    pts.forEach(p => pix.push(`PIXELS;${p[0]};${p[1]}`));
-    downloadFileUserClick(baseName + "_pixels.csv", pix.join("\n"), "Télécharger PIXELS");
+  try {
+    downloadFileUserClick(baseName + ".csv", lines.join("\n"), "Télécharger CSV");
+
+    if (archiverPixels) {
+      const pix = ["PIXELS;xp;yp"];
+      pts.forEach(p => pix.push(`PIXELS;${p[0]};${p[1]}`));
+      downloadFileUserClick(baseName + "_pixels.csv", pix.join("\n"), "Télécharger PIXELS");
+    }
+
+    alert("Export prêt. Les boutons sont en bas à droite : " + baseName);
+
+  } catch (e) {
+    alert("Erreur export UI : " + (e && e.message ? e.message : e));
+    console.error(e);
   }
-
-  alert("Export terminé : " + baseName + ".csv");
 
 })();
