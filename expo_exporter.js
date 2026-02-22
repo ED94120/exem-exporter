@@ -31,16 +31,32 @@
       .slice(0, 120);                                     // limite longueur
   }
 
-  function downloadFile(name, content) {
-    const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
+function downloadFileUserClick(name, content, label = "Télécharger") {
+  const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+
+  const box = document.createElement("div");
+  box.style.cssText = "position:fixed;z-index:999999;top:12px;right:12px;background:#fff;border:1px solid #333;padding:10px;font:14px Arial;box-shadow:0 2px 10px rgba(0,0,0,.2)";
+
+  const btn = document.createElement("button");
+  btn.textContent = `${label} : ${name}`;
+  btn.style.cssText = "cursor:pointer;padding:6px 10px";
+
+  btn.onclick = () => {
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
+    a.href = url;
     a.download = name;
     a.rel = "noopener";
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
-  }
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    box.remove();
+  };
+
+  box.appendChild(btn);
+  document.body.appendChild(box);
+}
 
   // --------------------------
   // Extraction pixels
@@ -215,12 +231,12 @@
 
   audit.forEach(a => lines.push(a));
 
-  downloadFile(baseName + ".csv", lines.join("\n"));
+  downloadFileUserClick(baseName + ".csv", lines.join("\n"), "Télécharger CSV");
 
   if (archiverPixels) {
     const pix = ["PIXELS;xp;yp"];
     pts.forEach(p => pix.push(`PIXELS;${p[0]};${p[1]}`));
-    downloadFile(baseName + "_pixels.csv", pix.join("\n"));
+    downloadFileUserClick(baseName + "_pixels.csv", pix.join("\n"), "Télécharger PIXELS");
   }
 
   alert("Export terminé : " + baseName + ".csv");
