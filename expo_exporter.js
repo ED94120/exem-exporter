@@ -31,31 +31,47 @@
       .slice(0, 120);                                     // limite longueur
   }
 
-function downloadFileUserClick(name, content, label = "Télécharger") {
-  const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
+async function downloadFileUserClick(name, content, label = "Télécharger") {
 
-  const box = document.createElement("div");
-  box.style.cssText = "position:fixed;z-index:999999;top:12px;right:12px;background:#fff;border:1px solid #333;padding:10px;font:14px Arial;box-shadow:0 2px 10px rgba(0,0,0,.2)";
+  const box = getOrCreateExportBox();
+  const btnWrap = box.querySelector("#EXEM_EXPORT_BTNS");
 
   const btn = document.createElement("button");
   btn.textContent = `${label} : ${name}`;
-  btn.style.cssText = "cursor:pointer;padding:6px 10px";
+  btn.style.cssText = "cursor:pointer;padding:6px 10px;text-align:left";
 
-  btn.onclick = () => {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = name;
-    a.rel = "noopener";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1500);
-    box.remove();
+  btn.onclick = async () => {
+
+    if (!window.showSaveFilePicker) {
+      alert("Navigateur trop ancien pour sauvegarde sécurisée.");
+      return;
+    }
+
+    try {
+
+      const handle = await window.showSaveFilePicker({
+        suggestedName: name,
+        types: [{
+          description: "CSV",
+          accept: { "text/csv": [".csv"] }
+        }]
+      });
+
+      const writable = await handle.createWritable();
+      await writable.write(content);
+      await writable.close();
+
+      btn.disabled = true;
+      btn.textContent = `Enregistré : ${name}`;
+
+    } catch (err) {
+      if (err.name !== "AbortError") {
+        alert("Erreur sauvegarde : " + err.message);
+      }
+    }
   };
 
-  box.appendChild(btn);
-  document.body.appendChild(box);
+  btnWrap.appendChild(btn);
 }
 
   // --------------------------
