@@ -524,7 +524,9 @@
   lines.push(`META;Pixels_Archive;${archiverPixels ? "OUI" : "NON"}`);
   lines.push(`META;NbMesures;${nbMesures}`);
   lines.push(`META;NbMesuresValides;${nbMesuresValides}`);
-
+  lines.push(`META;SeuilExpoMax_Vm;${SEUIL_EXPO_MAX}`);
+  lines.push(`META;SeuilDeltaMinutes;${SEUIL_DELTA_MINUTES}`);
+  
   lines.push(`DATA;DateHeure;Exposition_Vm`);
 
   decoded.forEach(d => {
