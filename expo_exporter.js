@@ -44,6 +44,16 @@
         "background:#fff;border:1px solid #999;border-radius:6px;" +
         "padding:10px;max-width:55vw;max-height:45vh;overflow:auto;" +
         "font:12px/1.3 Arial;box-shadow:0 2px 10px rgba(0,0,0,0.2)";
+      const closeBtn = document.createElement("button");
+      closeBtn.textContent = "✕";
+      closeBtn.style.cssText =
+        "position:absolute;top:6px;right:8px;border:none;background:none;" +
+        "cursor:pointer;font-weight:bold;font-size:14px";
+      
+      closeBtn.onclick = () => box.remove();
+      
+      box.style.position = "fixed"; // assure position absolue interne
+      box.appendChild(closeBtn);
       const title = document.createElement("div");
       title.textContent = "Exports";
       title.style.cssText = "font-weight:bold;margin-bottom:8px";
