@@ -1,19 +1,17 @@
 (async () => {
 
-  const SCRIPT_VERSION = "EXPO_CAPTEUR_V1_2026_02_22";
-  const SEUIL_EXPO_MAX = 10.0;        // si E >= 10 V/m => Exposition vidée
-  const SEUIL_DELTA_MINUTES = 30;     // si delta <= 30 min (entre 2 mesures valides) => Exposition vidée
+  const SCRIPT_VERSION = "EXPO_CAPTEUR_V2_HIGHCHARTS_DATA_2026_02_22";
+  const SEUIL_EXPO_MAX = 10.0;
+  const SEUIL_DELTA_MINUTES = 30;
 
   // --------------------------
   // Utils dates / nombres
   // --------------------------
 
   function parseFRDate(s) {
-    // Accepte : "dd/mm/yyyy hh:mm" ou "dd/mm/yyyy hh:mm:ss"
-    const m = String(s || "").trim().match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?$/);
+    const m = String(s || "").trim().match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})$/);
     if (!m) return null;
-    const sec = m[6] ? +m[6] : 0;
-    return new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5], sec, 0);
+    return new Date(+m[3], +m[2] - 1, +m[1], +m[4], +m[5], 0, 0);
   }
 
   function fmtFRDate(d) {
@@ -39,20 +37,20 @@
   }
 
   // --------------------------
-  // Saisie
+  // Saisie minimale (uniquement contrôle)
   // --------------------------
 
   function askText(label, current) {
     const v = prompt(label, current == null ? "" : String(current));
-    if (v === null) return null;      // cancel = inconnu
-    return String(v);                 // vide autorisé
+    if (v === null) return null;
+    return String(v);
   }
 
   function askDate(label, currentStr) {
     const v = prompt(label, currentStr || "");
-    if (v === null) return { str: null, date: null };     // cancel = inconnu
+    if (v === null) return { str: null, date: null };
     const s = String(v).trim();
-    if (s === "") return { str: "", date: null };         // vide = inconnu
+    if (s === "") return { str: "", date: null };
     const d = parseFRDate(s);
     if (!d) {
       alert("Date invalide. Format attendu : dd/mm/yyyy hh:mm");
@@ -69,80 +67,7 @@
     return !(d instanceof Date) || isNaN(d.getTime());
   }
 
-  function getMissingFields(P) {
-    const miss = [];
-    if (isMissingText(P.reference)) miss.push("Référence");
-    if (isMissingText(P.adresse)) miss.push("Adresse");
-    if (isMissingDate(P.DateDeb)) miss.push("Date début");
-    if (isMissingDate(P.DateFin)) miss.push("Date fin");
-    return miss;
-  }
-
-  function buildRecap(P) {
-    const show = v => (isMissingText(v) ? "NON RENSEIGNÉ" : String(v));
-    const showDate = (s, d) => (isMissingDate(d) ? "NON RENSEIGNÉ" : s);
-    const yesno = b => (b ? "OUI" : "NON");
-
-    const missing = getMissingFields(P);
-
-    return [
-      "Récapitulatif",
-      "--------------------------------",
-      `Référence : ${show(P.reference)}`,
-      `Adresse   : ${show(P.adresse)}`,
-      `Date début: ${showDate(P.sDateDeb, P.DateDeb)}`,
-      `Date fin  : ${showDate(P.sDateFin, P.DateFin)}`,
-      `Pixels bruts : ${yesno(P.archiverPixels)}`,
-      "",
-      missing.length ? ("Champs manquants : " + missing.join(", ")) : "Tous les champs sont renseignés.",
-      "",
-      "OK = Lancer (si complet) / Annuler = Modifier"
-    ].join("\n");
-  }
-
-  function editOneField(P) {
-    const choice = prompt(
-      "Modifier quel champ ?\n" +
-      "1 Référence\n" +
-      "2 Adresse\n" +
-      "3 Date début\n" +
-      "4 Date fin\n" +
-      "8 Pixels bruts\n" +
-      "0 Retour\n" +
-      "00 EXIT (abandonner)",
-      "0"
-    );
-
-    if (choice === null) return true; // Cancel = retour synthèse
-
-    const c = String(choice).trim();
-
-    if (c === "00") return false;   // EXIT complet
-    if (c === "0") return true;     // retour synthèse
-
-    if (c === "1") { P.reference = askText("Référence Capteur (ex: Site #Nantes_46) :", P.reference); return true; }
-    if (c === "2") { P.adresse = askText("Adresse Capteur :", P.adresse); return true; }
-
-    if (c === "3") {
-      const r = askDate("Date début (dd/mm/yyyy hh:mm) :", P.sDateDeb);
-      P.sDateDeb = r.str; P.DateDeb = r.date;
-      return true;
-    }
-
-    if (c === "4") {
-      const r = askDate("Date fin (dd/mm/yyyy hh:mm) :", P.sDateFin);
-      P.sDateFin = r.str; P.DateFin = r.date;
-      return true;
-    }
-
-    if (c === "8") { P.archiverPixels = confirm("Archiver pixels bruts ?"); return true; }
-
-    alert("Choix invalide.");
-    return true;
-  }
-
-  function collectAndConfirmUserInputs() {
-
+  function collectInputs() {
     const P = {
       reference: null,
       adresse: null,
@@ -157,42 +82,25 @@
     P.adresse = askText("Adresse Capteur :", "");
 
     {
-      const rDeb = askDate("Date début (dd/mm/yyyy hh:mm) :", "");
+      const rDeb = askDate("Date début (dd/mm/yyyy hh:mm) (contrôle) :", "");
       P.sDateDeb = rDeb.str; P.DateDeb = rDeb.date;
     }
     {
-      const rFin = askDate("Date fin (dd/mm/yyyy hh:mm) :", "");
+      const rFin = askDate("Date fin (dd/mm/yyyy hh:mm) (contrôle) :", "");
       P.sDateFin = rFin.str; P.DateFin = rFin.date;
     }
 
-    P.archiverPixels = confirm("Archiver pixels bruts ?");
+    P.archiverPixels = confirm("Archiver pixels bruts (inutile ici) ?");
 
-    while (true) {
-
-      if (!isMissingDate(P.DateDeb) && !isMissingDate(P.DateFin)) {
-        if (P.DateFin.getTime() <= P.DateDeb.getTime()) {
-          alert("Erreur : Date fin doit être strictement après Date début.");
-          const rFin = askDate("Date fin (dd/mm/yyyy hh:mm) :", P.sDateFin);
-          P.sDateFin = rFin.str; P.DateFin = rFin.date;
-        }
-      }
-
-      const missing = getMissingFields(P);
-      const ok = confirm(buildRecap(P));
-
-      if (ok) {
-        if (missing.length) {
-          alert("Impossible de lancer : complète les champs manquants.\n" + missing.join(", "));
-          const keep = editOneField(P);
-          if (!keep) return null;
-          continue;
-        }
-        return P;
-      }
-
-      const keep = editOneField(P);
-      if (!keep) return null;
+    if (isMissingText(P.reference) || isMissingText(P.adresse) || isMissingDate(P.DateDeb) || isMissingDate(P.DateFin)) {
+      alert("Champs obligatoires manquants (référence, adresse, date début, date fin).");
+      return null;
     }
+    if (P.DateFin.getTime() <= P.DateDeb.getTime()) {
+      alert("Erreur : Date fin doit être strictement après Date début.");
+      return null;
+    }
+    return P;
   }
 
   // ============================================================
@@ -248,7 +156,6 @@
   }
 
   async function downloadFileUserClick(name, content, label = "Télécharger") {
-
     const box = getOrCreateExportBox();
     const btnWrap = box.querySelector("#EXEM_EXPORT_BTNS");
 
@@ -260,26 +167,19 @@
       "border-radius:4px;background:#f7f7f7";
 
     btn.onclick = async () => {
-
       if (window.showSaveFilePicker) {
         try {
           const handle = await window.showSaveFilePicker({
             suggestedName: name,
-            types: [{
-              description: "CSV",
-              accept: { "text/csv": [".csv"] }
-            }]
+            types: [{ description: "CSV", accept: { "text/csv": [".csv"] } }]
           });
-
           const writable = await handle.createWritable();
           await writable.write(content);
           await writable.close();
-
           btn.disabled = true;
           btn.textContent = `Enregistré : ${name}`;
           btn.style.opacity = "0.7";
           return;
-
         } catch (err) {
           if (err && err.name === "AbortError") return;
           alert("Erreur sauvegarde : " + (err && err.message ? err.message : err));
@@ -291,20 +191,16 @@
       try {
         const blob = new Blob([content], { type: "text/csv;charset=utf-8" });
         const url = URL.createObjectURL(blob);
-
         const a = document.createElement("a");
         a.href = url;
         a.download = name;
         document.body.appendChild(a);
         a.click();
         a.remove();
-
         setTimeout(() => URL.revokeObjectURL(url), 1000);
-
         btn.disabled = true;
         btn.textContent = `Téléchargé : ${name}`;
         btn.style.opacity = "0.7";
-
       } catch (e) {
         alert("Erreur téléchargement : " + (e && e.message ? e.message : e));
         console.error(e);
@@ -315,10 +211,10 @@
   }
 
   // ============================================================
-  // 1) Saisie en premier (référence/adresse + dates de contrôle)
+  // 1) Saisie
   // ============================================================
 
-  const P = collectAndConfirmUserInputs();
+  const P = collectInputs();
   if (!P) { alert("Abandon."); return; }
 
   const reference = P.reference;
@@ -330,136 +226,152 @@
   const DateDeb = P.DateDeb;
   const DateFin = P.DateFin;
 
-  const archiverPixels = P.archiverPixels;
-
   // ============================================================
-  // 2) Extraction mesures via les POP-UPS (tooltips HTML)
+  // 2) Récupération du chart Highcharts (sans markers / sans popups)
   // ============================================================
 
-  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-
-  function getTooltipTextHTML() {
-    const el = document.querySelector("div.highcharts-label, div.highcharts-tooltip, span.highcharts-tooltip");
-    if (!el) return null;
-    const t = (el.innerText || el.textContent || "").replace(/\s+/g, " ").trim();
-    return t || null;
+  if (!window.Highcharts || !Array.isArray(window.Highcharts.charts)) {
+    alert("Highcharts introuvable (window.Highcharts.charts absent).");
+    return;
   }
 
-  function parseTooltip(t) {
-    // Exemples possibles :
-    // "02/09/2022 21:06 3.55 V/m"
-    // ou tooltip sur 2 lignes -> innerText remet un espace
-    const s = String(t || "").replace(/\s+/g, " ").trim();
-    const m = s.match(/(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2})(?::(\d{2}))?.*?(-?\d+(?:[.,]\d+)?)/);
-    if (!m) return null;
-
-    const dt = m[1] + " " + m[2] + (m[3] ? (":" + m[3]) : "");
-    const d = parseFRDate(dt);
-    if (!d) return null;
-
-    const E = parseFloat(m[4].replace(",", "."));
-    if (!Number.isFinite(E)) return null;
-
-    return [d.getTime(), E];
+  const chart = window.Highcharts.charts.find(c => c && c.series && c.series.length);
+  if (!chart) {
+    alert("Aucun chart Highcharts trouvé.");
+    return;
   }
 
-  const ptEls = Array.from(document.querySelectorAll("g.highcharts-markers .highcharts-point"));
-  if (!ptEls.length) { alert("Points (markers) introuvables"); return; }
+  const series = chart.series.find(s => s && (s.xData || (s.options && s.options.data)));
+  if (!series) {
+    alert("Aucune série exploitable trouvée dans le chart.");
+    return;
+  }
 
-  // Tri gauche->droite : on utilise le centre écran (plus robuste que getBBox seul)
-  const pts = ptEls
-    .map(el => {
-      const r = el.getBoundingClientRect();
-      return { el, cx: r.left + r.width / 2, cy: r.top + r.height / 2, x: r.left + r.width / 2 };
-    })
-    .sort((a, b) => a.x - b.x)
-    .map(o => o.el);
+  // xData/yData = méthode la plus fiable quand boost/simplification est active
+  let xData = series.xData;
+  let yData = series.yData;
+
+  // fallback: options.data
+  if ((!xData || !yData || xData.length !== yData.length) && series.options && Array.isArray(series.options.data)) {
+    const raw = series.options.data;
+    // raw peut être [y] (si catégories) ou [ [x,y], ... ]
+    if (Array.isArray(raw[0])) {
+      xData = raw.map(p => p[0]);
+      yData = raw.map(p => p[1]);
+    } else {
+      // pas d'X explicite -> on utilisera les catégories ou l'index
+      yData = raw.slice();
+      xData = raw.map((_, i) => i);
+    }
+  }
+
+  if (!xData || !yData || xData.length < 2 || xData.length !== yData.length) {
+    alert("Impossible de récupérer xData/yData de façon cohérente.");
+    return;
+  }
+
+  // Détection si X est un timestamp (ms) ou juste un index
+  const looksLikeMs = (v) => Number.isFinite(v) && v > 1e11; // ~2003 en ms
+  const xIsDateMs = looksLikeMs(xData[0]) || looksLikeMs(xData[xData.length - 1]);
+
+  // Si X est un index : on tente de récupérer les catégories (labels) du chart
+  let categories = null;
+  if (!xIsDateMs && chart.xAxis && chart.xAxis[0] && Array.isArray(chart.xAxis[0].categories)) {
+    categories = chart.xAxis[0].categories;
+  }
+
+  // ============================================================
+  // 3) Construction decoded = [t_ms, E] (ou E sans date si impossible)
+  // ============================================================
 
   const decoded = [];
   const audit = [];
-  const seen = new Set();
 
-  for (let i = 0; i < pts.length; i++) {
-    const el = pts[i];
-    const r = el.getBoundingClientRect();
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height / 2;
+  for (let i = 0; i < xData.length; i++) {
+    const x = xData[i];
+    const y = yData[i];
 
-    el.dispatchEvent(new MouseEvent("mouseover", { bubbles: true, clientX: cx, clientY: cy }));
-    el.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: cx, clientY: cy }));
+    if (!Number.isFinite(y)) continue; // ignore NaN/undefined
 
-    await sleep(350);
+    let t_ms = null;
 
-    const txt = getTooltipTextHTML();
-    if (!txt) {
-      audit.push(`AUDIT;TOOLTIP_INTROUVABLE;${i}`);
-      continue;
+    if (xIsDateMs && Number.isFinite(x)) {
+      t_ms = x;
+    } else if (categories && categories[i]) {
+      // categories souvent sous forme "dd/mm/yyyy hh:mm" ou similaire
+      const d = parseFRDate(String(categories[i]).trim());
+      if (d) t_ms = d.getTime();
     }
 
-    const rParsed = parseTooltip(txt);
-    if (!rParsed) {
-      audit.push(`AUDIT;TOOLTIP_NON_PARSE;${i};${txt}`);
-      continue;
-    }
-
-    const key = rParsed[0] + "|" + rParsed[1].toFixed(6);
-    if (!seen.has(key)) {
-      seen.add(key);
-      decoded.push(rParsed);
-    }
+    decoded.push([t_ms, y]);
   }
 
-  if (decoded.length < 2) { alert("Pas assez de mesures extraites depuis les pop-ups."); return; }
+  if (decoded.length < 2) {
+    alert("Pas assez de valeurs exploitables dans la série.");
+    return;
+  }
 
-  decoded.sort((a, b) => a[0] - b[0]);
+  // Si on a des temps, on trie par temps
+  const hasTimes = decoded.some(r => r[0] !== null);
+  if (hasTimes) decoded.sort((a, b) => (a[0] ?? 0) - (b[0] ?? 0));
 
   // ============================================================
-  // 3) Contrôle cohérence dates saisies vs dates extraites
+  // 4) Contrôle cohérence (si temps dispo)
   // ============================================================
 
-  const tFirst = decoded[0][0];
-  const tLast  = decoded[decoded.length - 1][0];
+  if (hasTimes) {
+    const tFirst = decoded.find(r => r[0] !== null)?.[0];
+    const tLast = [...decoded].reverse().find(r => r[0] !== null)?.[0];
 
-  const diffFirstMin = Math.round((tFirst - DateDeb.getTime()) / 60000);
-  const diffLastMin  = Math.round((tLast  - DateFin.getTime()) / 60000);
+    if (tFirst != null && tLast != null) {
+      const diffFirstMin = Math.round((tFirst - DateDeb.getTime()) / 60000);
+      const diffLastMin  = Math.round((tLast  - DateFin.getTime()) / 60000);
 
-  audit.push(`AUDIT;DATE_FIRST_EXTRACTED;${fmtFRDate(new Date(tFirst))};DiffMin=${diffFirstMin}`);
-  audit.push(`AUDIT;DATE_LAST_EXTRACTED;${fmtFRDate(new Date(tLast))};DiffMin=${diffLastMin}`);
+      audit.push(`AUDIT;DATE_FIRST_EXTRACTED;${fmtFRDate(new Date(tFirst))};DiffMin=${diffFirstMin}`);
+      audit.push(`AUDIT;DATE_LAST_EXTRACTED;${fmtFRDate(new Date(tLast))};DiffMin=${diffLastMin}`);
 
-  if (Math.abs(diffFirstMin) > 5 || Math.abs(diffLastMin) > 5) {
-    alert(
-      "Alerte cohérence dates\n" +
-      "Date début saisie : " + fmtFRDate(DateDeb) + "\n" +
-      "Date début extraite : " + fmtFRDate(new Date(tFirst)) + " (Delta " + diffFirstMin + " min)\n\n" +
-      "Date fin saisie : " + fmtFRDate(DateFin) + "\n" +
-      "Date fin extraite : " + fmtFRDate(new Date(tLast)) + " (Delta " + diffLastMin + " min)\n\n" +
-      "Vérifie les dates saisies et celles affichées dans les pop-ups."
-    );
+      if (Math.abs(diffFirstMin) > 5 || Math.abs(diffLastMin) > 5) {
+        alert(
+          "Alerte cohérence dates\n" +
+          "Date début saisie : " + fmtFRDate(DateDeb) + "\n" +
+          "Date début extraite : " + fmtFRDate(new Date(tFirst)) + " (Delta " + diffFirstMin + " min)\n\n" +
+          "Date fin saisie : " + fmtFRDate(DateFin) + "\n" +
+          "Date fin extraite : " + fmtFRDate(new Date(tLast)) + " (Delta " + diffLastMin + " min)\n\n" +
+          "=> Si ce n’est pas cohérent, c’est que le graphe n’expose pas les vraies dates en xData (cas ‘index/catégories’)."
+        );
+      }
+    }
+  } else {
+    audit.push("AUDIT;WARNING;Aucune date récupérable via Highcharts (xData non timestamp et categories absentes).");
+    alert("Attention : je récupère bien les expositions, mais je n’arrive pas à récupérer les dates (xData non temporel).");
   }
 
   // ============================================================
-  // 4) Filtrages : delta (uniquement entre mesures valides) + seuil E
+  // 5) Filtrage delta + expo (delta uniquement entre mesures valides)
   // ============================================================
 
   let deltaIssues = 0;
   let expoIssues = 0;
 
-  let prevValidIdx = null;
-
+  // Filtre expo max
   for (let k = 0; k < decoded.length; k++) {
-
-    // Filtre expo max
     if (decoded[k][1] !== null && decoded[k][1] >= SEUIL_EXPO_MAX) {
       expoIssues++;
       audit.push(`AUDIT;EXPO_SUP_10;${k};E=${decoded[k][1]}`);
       decoded[k][1] = null;
-      continue;
     }
+  }
 
-    // Filtre delta : comparer uniquement à la précédente mesure valide (E non vide)
-    if (decoded[k][1] !== null) {
+  // Filtre delta (uniquement si on a des temps)
+  if (hasTimes) {
+    let prevValidIdx = null;
+    for (let k = 0; k < decoded.length; k++) {
+      const t = decoded[k][0];
+      const E = decoded[k][1];
+      if (t == null || E === null) continue;
+
       if (prevValidIdx !== null) {
-        const dtMin = (decoded[k][0] - decoded[prevValidIdx][0]) / 60000;
+        const dtMin = (t - decoded[prevValidIdx][0]) / 60000;
         if (dtMin <= SEUIL_DELTA_MINUTES) {
           deltaIssues++;
           audit.push(`AUDIT;DELTA_TROP_PETIT;${k};DeltaMin=${dtMin}`);
@@ -475,7 +387,7 @@
   const nbMesuresValides = decoded.reduce((acc, d) => acc + (d[1] === null ? 0 : 1), 0);
 
   // ============================================================
-  // 5) Stats a posteriori : Min / Moy / Max
+  // 6) Stats
   // ============================================================
 
   const vals = decoded.map(d => d[1]).filter(v => v !== null && Number.isFinite(v));
@@ -491,14 +403,14 @@
   audit.push(`AUDIT;FILTERS;NbDeltaTropPetit=${deltaIssues};NbExpoSup10=${expoIssues}`);
 
   alert(
-    "Stats calculées (à comparer avec EXEM) :\n" +
+    "Stats calculées (série Highcharts) :\n" +
     "Min : " + (Number.isFinite(Emin) ? fmtFRNumber(Emin) : "NA") + " V/m\n" +
     "Moy : " + (Number.isFinite(Emoy) ? fmtFRNumber(Emoy) : "NA") + " V/m\n" +
     "Max : " + (Number.isFinite(Emax) ? fmtFRNumber(Emax) : "NA") + " V/m"
   );
 
   // ============================================================
-  // 6) Construction CSV
+  // 7) CSV
   // ============================================================
 
   const now = new Date();
@@ -514,39 +426,33 @@
   lines.push(`META;Adresse_Capteur;${adresse}`);
   lines.push(`META;DateDebut_Saisie;${sDateDeb}`);
   lines.push(`META;DateFin_Saisie;${sDateFin}`);
-  lines.push(`META;DateDebut_Extraite;${fmtFRDate(new Date(tFirst))}`);
-  lines.push(`META;DateFin_Extraite;${fmtFRDate(new Date(tLast))}`);
-  lines.push(`META;DeltaDebut_Min;${diffFirstMin}`);
-  lines.push(`META;DeltaFin_Min;${diffLastMin}`);
-
-  lines.push(`META;ExpoMin_Decodee_Vm;${Number.isFinite(Emin) ? fmtFRNumber(Emin) : ""}`);
-  lines.push(`META;ExpoMoy_Decodee_Vm;${Number.isFinite(Emoy) ? fmtFRNumber(Emoy) : ""}`);
-  lines.push(`META;ExpoMax_Decodee_Vm;${Number.isFinite(Emax) ? fmtFRNumber(Emax) : ""}`);
-
+  lines.push(`META;HasTimes;${hasTimes ? "OUI" : "NON"}`);
   lines.push(`META;NbDeltaTropPetit;${deltaIssues}`);
   lines.push(`META;NbExpoSup10;${expoIssues}`);
-
-  lines.push(`META;Pixels_Archive;${archiverPixels ? "OUI" : "NON"}`);
   lines.push(`META;NbMesures;${nbMesures}`);
   lines.push(`META;NbMesuresValides;${nbMesuresValides}`);
   lines.push(`META;SeuilExpoMax_Vm;${fmtFRNumber(SEUIL_EXPO_MAX)}`);
   lines.push(`META;SeuilDeltaMinutes;${SEUIL_DELTA_MINUTES}`);
-  lines.push(`META;RegleFiltrage;Delta<=${SEUIL_DELTA_MINUTES}min_exclu_sur_mesures_valides;Expo>=${fmtFRNumber(SEUIL_EXPO_MAX)}Vm_exclu`);
+  lines.push(`META;ExpoMin_Vm;${Number.isFinite(Emin) ? fmtFRNumber(Emin) : ""}`);
+  lines.push(`META;ExpoMoy_Vm;${Number.isFinite(Emoy) ? fmtFRNumber(Emoy) : ""}`);
+  lines.push(`META;ExpoMax_Vm;${Number.isFinite(Emax) ? fmtFRNumber(Emax) : ""}`);
 
   lines.push(`DATA;DateHeure;Exposition_Vm`);
 
   decoded.forEach(d => {
-    lines.push(`DATA;${fmtFRDate(new Date(d[0]))};${d[1] === null ? "" : fmtFRNumber(d[1])}`);
+    const dt = (d[0] == null) ? "" : fmtFRDate(new Date(d[0]));
+    const e = (d[1] === null) ? "" : fmtFRNumber(d[1]);
+    lines.push(`DATA;${dt};${e}`);
   });
 
   audit.forEach(a => lines.push(a));
 
   // ============================================================
-  // 7) Export
+  // 8) Export
   // ============================================================
 
   try {
-    downloadFileUserClick(baseName + ".csv", lines.join("\n"), "Télécharger CSV");
+    await downloadFileUserClick(baseName + ".csv", lines.join("\n"), "Télécharger CSV");
     alert("Export prêt. Les boutons sont en bas à droite : " + baseName);
   } catch (e) {
     alert("Erreur export UI : " + (e && e.message ? e.message : e));
