@@ -123,6 +123,7 @@
   }
 
   function editOneField(P) {
+  
     const choice = prompt(
       "Modifier quel champ ?\n" +
       "1 Référence\n" +
@@ -133,41 +134,45 @@
       "6 Expo fin\n" +
       "7 Expo max\n" +
       "8 Pixels bruts\n" +
-      "0 Retour",
+      "0 Retour\n" +
+      "00 EXIT (abandonner)",
       "0"
     );
-    if (choice === null) return true; // cancel -> retour synthèse
-
+  
+    if (choice === null) return true; // Cancel = retour synthèse
+  
     const c = String(choice).trim();
-    if (c === "0") return true;
-
+  
+    if (c === "00") return false;   // EXIT complet
+    if (c === "0") return true;     // retour synthèse
+  
     if (c === "1") { P.reference = askText("Référence Capteur :", P.reference); return true; }
     if (c === "2") { P.adresse = askText("Adresse Capteur :", P.adresse); return true; }
-
+  
     if (c === "3") {
       const r = askDate("Date début (dd/mm/yyyy hh:mm) :", P.sDateDeb);
       P.sDateDeb = r.str; P.DateDeb = r.date;
       return true;
     }
-
+  
     if (c === "4") {
       const r = askDate("Date fin (dd/mm/yyyy hh:mm) :", P.sDateFin);
       P.sDateFin = r.str; P.DateFin = r.date;
       return true;
     }
-
+  
     if (c === "5") { P.ExpoDeb = askNumberFR("Expo début (V/m) :", P.ExpoDeb); return true; }
     if (c === "6") { P.ExpoFin = askNumberFR("Expo fin (V/m) :", P.ExpoFin); return true; }
     if (c === "7") { P.ExpoMax = askNumberFR("Expo max (V/m) :", P.ExpoMax); return true; }
-
+  
     if (c === "8") { P.archiverPixels = confirm("Archiver pixels bruts ?"); return true; }
-
+  
     alert("Choix invalide.");
     return true;
   }
 
   function collectAndConfirmUserInputs() {
-
+  
     const P = {
       reference: null,
       adresse: null,
@@ -180,11 +185,11 @@
       ExpoMax: NaN,
       archiverPixels: false
     };
-
-    // Saisie initiale : Cancel => valeur manquante, on continue
+  
+    // Saisie initiale (Cancel = inconnu, on continue)
     P.reference = askText("Référence Capteur (ex: Site #Nantes_46) :", "");
     P.adresse = askText("Adresse Capteur :", "");
-
+  
     {
       const rDeb = askDate("Date début (dd/mm/yyyy hh:mm) :", "");
       P.sDateDeb = rDeb.str; P.DateDeb = rDeb.date;
@@ -193,17 +198,17 @@
       const rFin = askDate("Date fin (dd/mm/yyyy hh:mm) :", "");
       P.sDateFin = rFin.str; P.DateFin = rFin.date;
     }
-
+  
     P.ExpoDeb = askNumberFR("Expo début (V/m) :", NaN);
     P.ExpoFin = askNumberFR("Expo fin (V/m) :", NaN);
     P.ExpoMax = askNumberFR("Expo max (V/m) :", NaN);
-
+  
     P.archiverPixels = confirm("Archiver pixels bruts ?");
-
-    // Boucle synthèse / correction : OK ne marche que si complet
+  
+    // Boucle synthèse / correction
     while (true) {
-
-      // Contrôle DateFin > DateDeb si les 2 existent
+  
+      // Vérification DateFin > DateDeb si présentes
       if (!isMissingDate(P.DateDeb) && !isMissingDate(P.DateFin)) {
         if (P.DateFin.getTime() <= P.DateDeb.getTime()) {
           alert("Erreur : Date fin doit être strictement après Date début.");
@@ -211,20 +216,22 @@
           P.sDateFin = rFin.str; P.DateFin = rFin.date;
         }
       }
-
+  
       const missing = getMissingFields(P);
       const ok = confirm(buildRecap(P));
-
+  
       if (ok) {
         if (missing.length) {
           alert("Impossible de lancer : complète les champs manquants.\n" + missing.join(", "));
-          editOneField(P);
+          const keep = editOneField(P);
+          if (!keep) return null;   // EXIT demandé
           continue;
         }
-        return P;
+        return P;  // tout est OK
       }
-
-      editOneField(P);
+  
+      const keep = editOneField(P);
+      if (!keep) return null;       // EXIT demandé
     }
   }
 
@@ -384,6 +391,7 @@
   // --------------------------
 
   const P = collectAndConfirmUserInputs();
+  if (!P) { alert("Abandon."); return; }
 
   const reference = P.reference;
   const adresse = P.adresse;
