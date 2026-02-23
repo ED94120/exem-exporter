@@ -1,17 +1,17 @@
-#**Extraction capteurs EXEM**
+# **Extraction capteurs EXEM**
 
-##**Objectif**
+## **Objectif**
 
-Ce script a une finalité exclusivement informative, éducative et de recherche.
+Ce script a une finalité exclusivement **informative, éducative et de recherche**.
 Il permet d’analyser l’évolution temporelle des niveaux d’exposition mesurés par les capteurs EXEM affichés sur le site ANFR de l’Observatoire des ondes (https://www.observatoiredesondes.com/fr/).
 L’objectif est d’étudier le comportement des niveaux d’exposition en fonction du temps et de l’environnement du capteur.
 
-Le script respecte les modalités d’utilisation du site :
+Le script est conçu pour respecter les modalités d’utilisation du site :
 - aucune requête automatisée vers les serveurs n’est effectuée,
 - aucune base de données ni API n’est interrogée,
 - seules les informations déjà visibles à l’écran sont lues localement dans le navigateur.
 
-##**Conditions de fonctionnement**
+## **Conditions de fonctionnement**
 
 Le script fonctionne uniquement si :
 - les points de mesure sont visibles sur le graphique temps–mesure,
@@ -20,7 +20,7 @@ Le script fonctionne uniquement si :
 
 Si la courbe est affichée en mode lissé sans points visibles, l’extraction est impossible.
 
-##**Principe technique**
+## **Principe technique**
 
 Le programme :
 - détecte les points de mesure visibles dans le graphique,
