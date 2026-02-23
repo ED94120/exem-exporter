@@ -1,4 +1,4 @@
-# **Extraction capteurs EXEM**
+# **Extraction capteurs EXEM (séries courtes)**
 
 ## **Objectif**
 
@@ -14,9 +14,9 @@ Le script est conçu pour respecter les modalités d’utilisation du site :
 ## **Conditions de fonctionnement**
 
 Le script fonctionne uniquement si :
-- les points de mesure sont visibles sur le graphique temps–mesure,
+- **les points de mesure sont visibles** sur le graphique temps–mesure,
 - la courbe affichée comporte des marqueurs individuels,
-- la période affichée est suffisamment courte pour que les points soient activés (en général 7 jours maximum).
+- la période affichée est suffisamment courte pour que les points soient activés (en général **7 jours maximum**).
 
 Si la courbe est affichée en mode lissé sans points visibles, l’extraction est impossible.
 
