@@ -5,6 +5,7 @@
 Ce script a une finalité exclusivement informative, éducative et de recherche.
 Il permet d’analyser l’évolution temporelle des niveaux d’exposition mesurés par les capteurs EXEM affichés sur le site de l’Observatoire des ondes.
 L’objectif est d’étudier le comportement des niveaux d’exposition en fonction du temps et de l’environnement du capteur.
+
 Le script respecte les modalités d’utilisation du site :
 - aucune requête automatisée vers les serveurs n’est effectuée,
 - aucune base de données ni API n’est interrogée,
@@ -15,6 +16,7 @@ Le script fonctionne uniquement si :
 - les points de mesure sont visibles sur le graphique temps–mesure,
 - la courbe affichée comporte des marqueurs individuels,
 - la période affichée est suffisamment courte pour que les points soient activés (en général 7 jours maximum).
+
 Si la courbe est affichée en mode lissé sans points visibles, l’extraction est impossible.
 
 ##**Principe technique**
