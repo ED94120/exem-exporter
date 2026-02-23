@@ -3,7 +3,7 @@
 ##**Objectif**
 
 Ce script a une finalité exclusivement informative, éducative et de recherche.
-Il permet d’analyser l’évolution temporelle des niveaux d’exposition mesurés par les capteurs EXEM affichés sur le site de l’Observatoire des ondes.
+Il permet d’analyser l’évolution temporelle des niveaux d’exposition mesurés par les capteurs EXEM affichés sur le site ANFR de l’Observatoire des ondes (https://www.observatoiredesondes.com/fr/).
 L’objectif est d’étudier le comportement des niveaux d’exposition en fonction du temps et de l’environnement du capteur.
 
 Le script respecte les modalités d’utilisation du site :
