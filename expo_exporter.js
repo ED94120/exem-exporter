@@ -160,35 +160,51 @@
   }
 
   // --------------------------
-  // 0) Vérifier présence des points (markers)
+  // 0) Vérifier présence des points (markers) visibles dans la zone de tracé
   // --------------------------
 
-  function getPointElements() {
-    // Highcharts peut utiliser circle ou path pour les points.
-    const sel = [
-      "g.highcharts-markers circle.highcharts-point",
-      "g.highcharts-markers path.highcharts-point",
-      "circle.highcharts-point",
-      "path.highcharts-point"
-    ].join(",");
-    const els = Array.from(document.querySelectorAll(sel));
+  function getVisiblePointElements() {
+    // On se limite au SVG Highcharts pour éviter de capturer d'autres SVG de la page
+    const svg = document.querySelector("svg.highcharts-root");
+    if (!svg) return [];
 
-    // Filtre : on ne garde que les éléments visibles (bbox non nul)
-    return els.filter(el => {
+    // Zone de tracé (plot area)
+    const plotBg = svg.querySelector("rect.highcharts-plot-background");
+    const plotRect = plotBg ? plotBg.getBoundingClientRect() : null;
+
+    // Points Highcharts (circle ou path) : class = highcharts-point
+    const candidates = Array.from(svg.querySelectorAll("g.highcharts-markers .highcharts-point"));
+
+    return candidates.filter(el => {
       const r = el.getBoundingClientRect();
-      return r.width > 0 && r.height > 0;
+      if (r.width <= 0 || r.height <= 0) return false;
+
+      const cs = getComputedStyle(el);
+      if (cs.display === "none" || cs.visibility === "hidden") return false;
+      if (parseFloat(cs.opacity || "1") === 0) return false;
+
+      // Vérifie que le point est dans le rectangle du graphe (évite les points hors zone)
+      if (plotRect) {
+        const cx = r.left + r.width / 2;
+        const cy = r.top + r.height / 2;
+        if (cx < plotRect.left || cx > plotRect.right) return false;
+        if (cy < plotRect.top || cy > plotRect.bottom) return false;
+      }
+      return true;
     });
   }
 
-  const ptElsCheck = getPointElements();
-  if (!ptElsCheck.length) {
+  const ptElsCheck = getVisiblePointElements();
+
+  if (ptElsCheck.length < 2) {
     alert(
       "Impossible d'extraire les mesures par pop-up : les points de mesure ne sont pas affichés.\n\n" +
       "Réduis la période (en général ≤ 7 jours) jusqu'à voir les points sur la courbe, puis relance."
     );
     return;
   }
-
+  
+ 
   // --------------------------
   // 1) Saisie minimale (référence + adresse)
   // --------------------------
@@ -242,7 +258,7 @@
   }
 
   // Tri gauche->droite à partir des coordonnées écran
-  const pts = getPointElements()
+  const pts = getVisiblePointElements()
     .map(el => {
       const r = el.getBoundingClientRect();
       return { el, x: r.left + r.width / 2, y: r.top + r.height / 2 };
