@@ -12,6 +12,7 @@ Le script respecte les modalités d’utilisation du site :
 - seules les informations déjà visibles à l’écran sont lues localement dans le navigateur.
 
 ##**Conditions de fonctionnement**
+
 Le script fonctionne uniquement si :
 - les points de mesure sont visibles sur le graphique temps–mesure,
 - la courbe affichée comporte des marqueurs individuels,
@@ -20,6 +21,7 @@ Le script fonctionne uniquement si :
 Si la courbe est affichée en mode lissé sans points visibles, l’extraction est impossible.
 
 ##**Principe technique**
+
 Le programme :
 - détecte les points de mesure visibles dans le graphique,
 - simule le survol de chaque point,
