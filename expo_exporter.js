@@ -223,20 +223,28 @@
   // 2) Lecture tooltip (SVG Highcharts)
   // --------------------------
 
-  function getTooltipTextSVG() {
-    const tip = document.querySelector("g.highcharts-tooltip");
-    if (!tip) return null;
+  function getTooltipTextAny() {
+    // 1) Tooltip SVG Highcharts
+    {
+      const tip = document.querySelector("g.highcharts-tooltip");
+      if (tip) {
+        const tspans = Array.from(tip.querySelectorAll("text tspan"));
+        const txt = tspans.map(t => (t.textContent || "").trim()).filter(Boolean).join(" ");
+        const s = txt.replace(/\s+/g, " ").trim();
+        if (s) return s;
+      }
+    }
 
-    // Le tooltip peut être hidden / opacity=0 quand aucun point n'est survolé.
-    const opacity = tip.getAttribute("opacity");
-    const visibility = tip.getAttribute("visibility");
-    if (visibility === "hidden") return null;
-    if (opacity === "0") return null;
+    // 2) Fallback : tooltip HTML (selon config Highcharts)
+    {
+      const el = document.querySelector("div.highcharts-tooltip, div.highcharts-label, span.highcharts-tooltip");
+      if (el) {
+        const s = String(el.innerText || el.textContent || "").replace(/\s+/g, " ").trim();
+        if (s) return s;
+      }
+    }
 
-    const tspans = Array.from(tip.querySelectorAll("text tspan"));
-    const txt = tspans.map(t => (t.textContent || "").trim()).filter(Boolean).join(" ");
-    const s = txt.replace(/\s+/g, " ").trim();
-    return s || null;
+    return null;
   }
 
   function parseTooltip(t) {
@@ -290,9 +298,14 @@
       continue;
     }
 
-    await sleep(220);
+    // Le tooltip peut mettre un peu de temps à se mettre à jour (animation/latence)
+    let txt = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await sleep(180);
+      txt = getTooltipTextAny();
+      if (txt) break;
+    }
 
-    const txt = getTooltipTextSVG();
     if (!txt) {
       audit.push(`AUDIT;TOOLTIP_INTROUVABLE;${i}`);
       continue;
