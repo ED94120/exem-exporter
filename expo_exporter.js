@@ -1,5 +1,30 @@
 (async () => {
 
+  // ------------------------------------------------------------
+  // Vérification contexte Observatoire des ondes (série courte / popup)
+  // ------------------------------------------------------------
+  (function checkContextShort() {
+    const url = String(location.href || "").toLowerCase();
+  
+    // Filtre URL (souple)
+    const okUrl =
+      url.includes("observatoire") ||
+      url.includes("cartoradio") ||
+      url.includes("anfr");
+  
+    // Filtre DOM (fiable) : présence d'un graphe Highcharts et d'une courbe
+    const hasHighcharts = !!document.querySelector(".highcharts-container");
+    const hasGraphPath  = !!document.querySelector("path.highcharts-graph");
+  
+    if (!okUrl || !hasHighcharts || !hasGraphPath) {
+      alert(
+        "Ce script doit être lancé depuis l'Observatoire des ondes (ANFR) sur une page affichant un graphique.\n\n" +
+        "Ouvrez une fiche capteur avec la courbe (popup/graphique), puis relancez le favori."
+      );
+      throw new Error("Contexte invalide : Observatoire/graphique introuvable.");
+    }
+  })();
+
   const SCRIPT_VERSION = "EXPO_CAPTEUR_POPUP_V2_2026_02_23";
   const SEUIL_EXPO_MAX = 10.0;        // si E >= 10 V/m => Exposition vidée
   const SEUIL_DELTA_MINUTES = 30;     // si delta <= 30 min (entre 2 mesures valides) => Exposition vidée
